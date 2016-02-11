@@ -34,7 +34,7 @@ options:
         required: true
         choices: ['present', 'absent']
     scope:
-        description: ["The scope to apply the downtime"]
+        description: ["The tag scopes to apply the downtime to, comma seperated."]
         required: true
     start:
         description: ["POSIX timestamp to start the downtime"]
@@ -60,7 +60,7 @@ options:
 EXAMPLES = '''
 # Schedule a downtime for monitor
 datadog_downtime:
-  scope: "Test monitor"
+  scope: "test:tag,test2:tag"
   state: "present"
   message: "Some message."
   api_key: "key"
@@ -68,12 +68,13 @@ datadog_downtime:
 
 # Cancels a downtime for monitor
 datadog_downtime:
-  scope: "Test monitor"
+  scope: "test:tag,test2:tag"
   state: "absent"
   message: "Some message."
   api_key: "key"
   app_key: "app_key"
 '''
+
 
 def main():
     module = AnsibleModule(
@@ -82,7 +83,7 @@ def main():
             app_key=dict(required=True),
             state=dict(required=True, choices=['present', 'absent']),
             scope=dict(required=True),
-            start=dict(required=False, default=None),
+            start=dict(required=False, default=None, type='list'),
             end=dict(requried=False, default=None),
             message=dict(required=False, default=None),
             id=dict(required=False),
@@ -110,16 +111,18 @@ def main():
 
 def _get_downtime(module):
     stagingDowntimes = []
-    scope = [module.params['scope']]
+    scopes = module.params['scope'].split(',')
     for downtime in api.Downtime.get_all(current_only=module.params['current_only']):
-        if downtime['scope'] == scope:
-            stagingDowntimes.append(downtime)      
+        for scope in scopes:
+            if scope in downtime['scope']:
+                stagingDowntimes.append(downtime)
     return stagingDowntimes
-            
- 
+
+
 def _create_downtime(module):
     try:
-        msg = api.Downtime.create(scope=module.params['scope'], start=module.params['start'],
+        scopes = module.params['scope'].split(',')
+        msg = api.Downtime.create(scope=scopes, start=module.params['start'],
                                   end=module.params['end'], message=module.params['message'])
         if 'errors' in msg:
             module.fail_json(msg=str(msg['errors']))
@@ -131,7 +134,8 @@ def _create_downtime(module):
 
 def _update_downtime(module, downtimes):
     try:
-        msg = api.Downtime.update(downtimes[0]['id'], scope=module.params['scope'], start=module.params['start'],
+        scopes = module.params['scope'].split(',')
+        msg = api.Downtime.update(downtimes[0]['id'], scope=scopes, start=module.params['start'],
                                   end=module.params['end'], message=module.params['message'])
         if 'errors' in msg:
             module.fail_json(msg=str(msg['errors']))
@@ -141,7 +145,7 @@ def _update_downtime(module, downtimes):
         module.fail_json(msg=str(e))
 
 
-def schedule_downtime(module, downtimes):   
+def schedule_downtime(module, downtimes):
     if not downtimes:
         _create_downtime(module)
     else:
@@ -151,12 +155,11 @@ def schedule_downtime(module, downtimes):
 def cancel_downtime(module, downtimes):
     try:
         for downtime in downtimes:
-            msg = api.Downtime.delete(downtime['id'])
+            api.Downtime.delete(downtime['id'])
         module.exit_json(changed=True, msg="Downtime for scope '%s' cancelled." % (module.params['scope']))
     except Exception, e:
         module.fail_json(msg=str(e))
-            
+
 
 from ansible.module_utils.basic import *
-
 main()
