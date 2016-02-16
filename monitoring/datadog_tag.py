@@ -33,7 +33,7 @@ options:
         description:["Tags of a particular host"]
         required: true
         default: null
-    state: 
+    state:
         description: ["The state of the tags"]
         required: true
         choices: ['present', 'absent']
@@ -45,7 +45,7 @@ options:
         description: ["A boolean indicating whether tags returned are grouped by source"]
         required: false
         default: False
-    tags: 
+    tags:
         description: ["Comma separated list of tags to apply to the host"]
         required: true
         default: null
@@ -56,11 +56,11 @@ EXAMPLES = '''
 datadog_tag:
   host: "Test host"
   state: "present"
-  tags: 'Tag1, Tag2' 
+  tags: 'Tag1, Tag2'
   api_key: "key"
   app_key: "app_key"
 
-# Deletes all tags 
+# Deletes all tags
 datadog_tag:
   host: "Test host"
   state: "absent"
@@ -68,6 +68,7 @@ datadog_tag:
   app_key: "app_key"
 
 '''
+
 
 def main():
     module = AnsibleModule(
@@ -81,7 +82,7 @@ def main():
             tags=dict(required=False, default=None)
         )
     )
-    
+
     # Prepare Datadog
     if not HAS_DATADOG:
         module.fail_json(msg='datadogpy required for this module')
@@ -90,27 +91,30 @@ def main():
         'api_key': module.params['api_key'],
         'app_key': module.params['app_key']
     }
-    
+
     initialize(**options)
-    
-    
+
     if module.params['state'] == 'present':
         add_tags(module)
     elif module.params['state'] == 'absent':
         delete_tags(module)
 
-   
+
 def _get_tags(module):
         hosts = api.Infrastructure.search(q=module.params['host'])
-        tags = api.Tag.get(hosts['results']['hosts'][0], by_source=module.boolean(module.params['by_source']), 
-                          source=module.params['source'])
-        return tags
-                                
+        tags = api.Tag.get(hosts['results']['hosts'][0], by_source=module.boolean(module.params['by_source']),
+                           source=module.params['source'])
+        if 'users' in tags['tags']:
+            return tags['tags']['users']
+        else:
+            return []
+
+
 def _create_tags(module):
-    try:       
+    try:
         hosts = api.Infrastructure.search(q=module.params['host'])
-        msg = api.Tag.create(hosts['results']['hosts'][0], tags=module.params['tags'].split(), 
-                            source=module.params['source'])   
+        msg = api.Tag.create(hosts['results']['hosts'][0], tags=module.params['tags'].split(','),
+                             source=module.params['source'])
         if 'errors' in msg:
             module.fail_json(msg=str(msg['errors']))
         else:
@@ -118,10 +122,14 @@ def _create_tags(module):
     except Exception, e:
         module.fail_json(msg=str(e))
 
+
 def _update_tags(module):
     try:
-        msg = api.Tag.update(module.params['host'], tags=module.params['tags'].split(), 
-                            source=module.params['source'])
+        new_tags = module.params['tags'].split(',')
+        old_tags = _get_tags(module)
+
+        msg = api.Tag.update(module.params['host'], tags=new_tags + old_tags,
+                             source=module.params['source'])
         if 'errors' in msg:
             module.fail_json(msg=str(msg['errors']))
         else:
@@ -131,21 +139,19 @@ def _update_tags(module):
 
 
 def add_tags(module):
-        
-        tags = _get_tags(module)
-        if not tags:
-            _create_tags(module)
-        else:
-            _update_tags(module)
-            
-            
+    tags = _get_tags(module)
+    if not tags:
+        _create_tags(module)
+    else:
+        _update_tags(module)
+
+
 def delete_tags(module):
     try:
         msg = api.Tag.delete(module.params['host'], source=module.params['source'])
         module.exit_json(changed=True, msg=msg)
     except Exception, e:
         module.fail_json(msg=str(e))
-
 
 from ansible.module_utils.basic import *
 from ansible.module_utils.urls import *
