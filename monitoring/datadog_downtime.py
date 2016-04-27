@@ -3,13 +3,21 @@
 
 # Author: Shivani Gowrishankar <s.gowrishankar@ntoggle.com>
 #
-
-# Import Datadog
-try:
-    from datadog import initialize, api
-    HAS_DATADOG = True
-except:
-    HAS_DATADOG = False
+#
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
 DOCUMENTATION = '''
 ---
@@ -18,7 +26,7 @@ short_description: Manages Datadog downtimes of monitors
 description:
 - "Manages Datadog downtimes of monitors"
 - "Options like described on http://docs.datadoghq.com/api/"
-version_added: "2.0"
+version_added: "2.1"
 author: '"Shivani Gowrishankar" <s.gowrishankar@ntoggle.com>'
 notes: []
 requirements: [datadog]
@@ -74,6 +82,21 @@ datadog_downtime:
   api_key: "key"
   app_key: "app_key"
 '''
+
+RETURN = '''
+changed:
+    description: A flag indicating if any change was made or not.
+    returned: success
+    type: boolean
+    sample: True
+'''
+
+# Import Datadog
+try:
+    from datadog import initialize, api
+    HAS_DATADOG = True
+except:
+    HAS_DATADOG = False
 
 
 def main():
