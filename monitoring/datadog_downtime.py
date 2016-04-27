@@ -26,7 +26,7 @@ short_description: Manages Datadog downtimes of monitors
 description:
 - "Manages Datadog downtimes of monitors"
 - "Options like described on http://docs.datadoghq.com/api/"
-version_added: "2.1"
+version_added: "2.2"
 author: '"Shivani Gowrishankar" <s.gowrishankar@ntoggle.com>'
 notes: []
 requirements: [datadog]
