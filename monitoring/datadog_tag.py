@@ -25,7 +25,7 @@ short_description: Manages Datadog tags of hosts
 description:
 - "Manages tags of hosts within Datadog"
 - "Options like described on http://docs.datadoghq.com/api/"
-version_added: "2.0"
+version_added: "2.2"
 author: '"Shivani Gowrishankar" <s.gowrishankar@ntoggle.com>'
 notes: []
 requirements: [datadog]
